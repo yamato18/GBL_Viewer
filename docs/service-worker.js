@@ -1,4 +1,4 @@
-const VERSION = "0.3.0";
+const VERSION = "0.5.0";
 
 const CACHE_NAME = `glb-viewer-${VERSION}`;
 
@@ -29,4 +29,10 @@ self.addEventListener("activate", (event) => {
       Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
     )
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "GET_VERSION") {
+    event.source.postMessage({ type: "VERSION", version: VERSION });
+  }
 });

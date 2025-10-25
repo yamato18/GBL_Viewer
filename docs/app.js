@@ -119,10 +119,40 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+const showVersion = (version) => {
+  const div = document.createElement("div");
+  div.textContent = `GLB Viewer: v${version}`;
+  div.style.position = "fixed";
+  div.style.bottom = "10px";
+  div.style.right = "10px";
+  div.style.backgroundColor = "rgba(0, 0, 0, 0.6)";
+  div.style.color = "#fff";
+  div.style.padding = "6px 12px";
+  div.style.borderRadius = "8px";
+  div.style.fontFamily = "Arial, sans-serif";
+  div.style.fontSize = "14px";
+  div.style.zIndex = "10000";
+  document.body.appendChild(div);
+}
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("service-worker.js").then(
     (registration) => {
       console.log("[INFO] ServiceWorker registration successful with scope: ", registration.scope);
+
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
+      } else {
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
+        });
+      }
+
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "VERSION") {
+          showVersion(event.data.version);
+        }
+      });
     },
     (err) => {
       console.error("[ERROR] ServiceWorker registration failed: ", err);
