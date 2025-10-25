@@ -79,8 +79,13 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
       fitCameraToObject(camera, gltf.scene, controls);
       setTimeout(() => URL.revokeObjectURL(url), 2000);
     },
-    (p) => console.log(`[INFO] Loading ${(p.loaded / p.total * 100).toFixed(1)}%`),
-    (err) => console.error("[Error] ", err)
+    (p) => {
+      console.log(`[INFO] Loading ${(p.loaded / p.total * 100).toFixed(1)}%`)
+    },
+    (err) => {
+      console.error("[Error] ", err);
+      alert("[Error]\nFailed to load model. Please check the file format and contents.");
+    }
   );
 });
 
@@ -91,6 +96,7 @@ const fitCameraToObject = (camera, object, controls) => {
 
   if (size.length() < 0.0001) {
     console.warn("[WARN] Model too small, scaling up.");
+    alert("[WARN]\nModel is too small, scaling up.");
     object.scale.set(100, 100, 100);
   }
 
