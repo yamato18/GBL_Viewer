@@ -118,3 +118,14 @@ window.addEventListener("resize", () => {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("service-worker.js").then(
+    (registration) => {
+      console.log("[INFO] ServiceWorker registration successful with scope: ", registration.scope);
+    },
+    (err) => {
+      console.error("[ERROR] ServiceWorker registration failed: ", err);
+    }
+  );
+}
