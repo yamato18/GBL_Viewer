@@ -1,4 +1,4 @@
-const VERSION = "0.6.0";
+const VERSION = "0.7.0";
 
 const CACHE_NAME = `glb-viewer-${VERSION}`;
 
@@ -27,7 +27,17 @@ const handleShare = async (request) => {
 
 // インストールイベント
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
+  event.waitUntil(
+    (async () => {
+      try {
+        const cache = await caches.open(CACHE_NAME)
+        await cache.addAll(ASSETS);
+        console.log("[INFO] ServiceWorker installed.");
+      } catch (error) {
+        console.error("[WARN] Some assets failed to cache: ", error);
+      }
+      self.skipWaiting();
+    })());
 });
 
 // フェッチイベント
@@ -40,18 +50,47 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (event.request.method !== "GET") return;
+
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    (async () => {
+      try {
+        const response = await fetch(event.request);
+        if (response && response.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          await cache.put(event.request, response.clone());
+        }
+        console.log("[INFO] ServiceWorker fetched.");
+        return response;
+      } catch (error) {
+        const resource = await caches.match(event.request);
+        if (resource) {
+          console.log(`[WARN] ServiceWorker fetch failed, using cache: ${event.request.url}`);
+          return resource;
+        }
+        console.error(`[ERROR] ServiceWorker fetch failed, no cache available: ${event.request.url}`);
+        return new Response(null, { status: 404 });
+      }
+    })(),
   );
 });
 
 // アクティベートイベント
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : null)))
-    )
+    (async () => {
+      const names = await caches.keys();
+      await Promise.all(
+        names.map((name) => {
+          if (name !== CACHE_NAME && name !== "shared-files") {
+            return  caches.delete(name);
+          }
+        }),
+      );
+      await clients.claim();
+    })()
   );
+  console.log("[INFO] ServiceWorker activated.");
 });
 
 // バージョン取得メッセージ処理

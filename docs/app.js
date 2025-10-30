@@ -16,13 +16,19 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
 // カメラコントロール設定
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 
 // 照明設定
 const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(hemisphereLight, ambientLight);
 
 // 矢印表示用関数
@@ -160,26 +166,40 @@ if ("serviceWorker" in navigator) {
     (registration) => {
       console.log("[INFO] ServiceWorker registration successful with scope: ", registration.scope);
 
-      // バージョン取得
-      if (navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
-      } else {
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
-        });
-      }
-
-      // バージョン表示
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "VERSION") {
-          showVersion(event.data.version);
+      registration.addEventListener("updatefound", () => {
+        const installWorker = registration.installing;
+        if (installWorker != null) {
+          installWorker.onstatechange = (e) => {
+            if (e.target.state === "activated") {
+              navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
+              navigator.serviceWorker.addEventListener("message", (event) => {
+                if (event.data && event.data.type === "VERSION") {
+                  const newVersion = event.data.version;
+                  showVersion(newVersion);
+                  alert(`【GLB_Viewer v${newVersion}】\nWebアプリが更新されました。アプリを再起動してください。\n一部の環境では更新が正しく適用されない場合があります。Webアプリを一度削除し、キャッシュの削除を実行の上で再度インストールしてください。`);
+                }
+              });
+            } 
+          };
         }
       });
+
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "GET_VERSION" });
+        navigator.serviceWorker.addEventListener("message", (event) => {
+          if (event.data && event.data.type === "VERSION") {
+            const currentVersion = event.data.version;
+            showVersion(currentVersion);
+          }
+        });
+      }
     },
     (err) => {
       console.error("[ERROR] ServiceWorker registration failed: ", err);
-    }
+    },
   );
+} else {
+  console.log("[WARN] ServiceWorkers are not supported.");
 }
 
 // 共有ファイル読み込み
